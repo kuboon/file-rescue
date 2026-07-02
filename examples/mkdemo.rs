@@ -14,6 +14,11 @@ fn main() -> std::io::Result<()> {
     let jpeg2 = minimal_jpeg(150_000);
     let png = minimal_png(80_000);
     let pdf = minimal_pdf(60_000);
+    let bmp = minimal_bmp(256, 256);
+    let gif = minimal_gif(40_000);
+    let avi = minimal_avi(200_000, 1);
+    let webm = minimal_mkv(120_000, true);
+    let m2ts = minimal_m2ts(500);
     let plants: Vec<(u64, &[u8])> = vec![
         (0x0010_0000, &mp4[..]),
         (0x00A0_0000, &mov[..]),
@@ -22,6 +27,11 @@ fn main() -> std::io::Result<()> {
         (0x00E0_0000, &jpeg2[..]),
         (0x00F0_0000, &png[..]),
         (0x00F8_0000, &pdf[..]),
+        (0x006E_0000, &bmp[..]),
+        (0x0072_0000, &gif[..]),
+        (0x0074_0000, &avi[..]),
+        (0x0078_0000, &webm[..]),
+        (0x007A_0000, &m2ts[..]),
     ];
     let disk = build_disk(16 * 1024 * 1024, &plants);
     std::fs::write(&path, &disk)?;

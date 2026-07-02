@@ -68,10 +68,21 @@ pub trait Carver: Sync {
 }
 
 pub fn builtin_carvers() -> Vec<Box<dyn Carver>> {
+    // Ordered roughly by magic strength / structure confidence: exact
+    // structure walkers first, sync-run heuristics last.
     vec![
         Box::new(super::formats::isobmff::IsoBmff),
+        Box::new(super::formats::riff::Riff),
+        Box::new(super::formats::matroska::Matroska),
+        Box::new(super::formats::asf::Asf),
         Box::new(super::formats::png::Png),
+        Box::new(super::formats::gif::Gif),
+        Box::new(super::formats::bmp::Bmp),
+        Box::new(super::formats::tiff::Tiff),
         Box::new(super::formats::jpeg::Jpeg),
+        Box::new(super::formats::mpeg::MpegPs),
+        Box::new(super::formats::mpeg::MpegTs::ts188()),
+        Box::new(super::formats::mpeg::MpegTs::m2ts192()),
         Box::new(super::formats::pdf::Pdf),
     ]
 }

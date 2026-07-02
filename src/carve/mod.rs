@@ -86,18 +86,20 @@ pub fn carve_scan(
         let got = carver::read_full(reader, base, &mut buf[..want])?;
         let chunk_end = (base + CHUNK).min(total);
         let mut off = cursor.max(base).next_multiple_of(align);
-        while off < chunk_end {
+        'offsets: while off < chunk_end {
             let rel = (off - base) as usize;
-            if let Some(hit) = match_magic(&carvers, &buf[..got], rel) {
-                let skip_here = map
-                    .is_some_and(|m| m.status_at(off) != Some(crate::map::SectorStatus::Rescued));
-                if !skip_here {
+            let skip_here =
+                map.is_some_and(|m| m.status_at(off) != Some(crate::map::SectorStatus::Rescued));
+            if !skip_here {
+                // Several carvers can match the same offset (weak magics
+                // like 0x47); try each candidate until one measures.
+                for hit in match_magic(&carvers, &buf[..got], rel) {
                     if let Some(m) = carvers[hit].measure(reader, off)? {
                         let file = extract(reader, outdir, &carvers, hit, off, m, map)?;
                         cursor = file.offset + file.len;
                         found.push(file);
                         off = cursor.next_multiple_of(align).max(off + align);
-                        continue;
+                        continue 'offsets;
                     }
                 }
             }
@@ -109,17 +111,19 @@ pub fn carve_scan(
     Ok(found)
 }
 
-fn match_magic(carvers: &[Box<dyn Carver>], buf: &[u8], rel: usize) -> Option<usize> {
+fn match_magic(carvers: &[Box<dyn Carver>], buf: &[u8], rel: usize) -> Vec<usize> {
+    let mut hits = Vec::new();
     for (i, c) in carvers.iter().enumerate() {
         let spec = c.spec();
         let at = rel + spec.magic_offset as usize;
         for magic in spec.magics {
             if buf.len() >= at + magic.len() && &buf[at..at + magic.len()] == *magic {
-                return Some(i);
+                hits.push(i);
+                break;
             }
         }
     }
-    None
+    hits
 }
 
 fn extract(

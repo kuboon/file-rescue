@@ -45,6 +45,46 @@ fn plants() -> Vec<Plant> {
             data: minimal_pdf(10_000),
             name: "pdf",
         },
+        Plant {
+            offset: 0x900000,
+            data: minimal_bmp(64, 64),
+            name: "bmp",
+        },
+        Plant {
+            offset: 0x920000,
+            data: minimal_gif(5_000),
+            name: "gif",
+        },
+        Plant {
+            offset: 0x940000,
+            data: minimal_avi(20_000, 1),
+            name: "riff",
+        },
+        Plant {
+            offset: 0x980000,
+            data: minimal_mkv(30_000, true),
+            name: "mkv",
+        },
+        Plant {
+            offset: 0x9C0000,
+            data: minimal_asf(20_000),
+            name: "asf",
+        },
+        Plant {
+            offset: 0xA00000,
+            data: minimal_tiff(20_000, true, false),
+            name: "tiff",
+        },
+        Plant {
+            offset: 0xA40000,
+            data: minimal_mpeg_ps(50),
+            name: "mpg",
+        },
+        Plant {
+            offset: 0xA60000,
+            data: minimal_m2ts(300),
+            name: "m2ts",
+        },
     ]
 }
 
@@ -125,6 +165,11 @@ fn extensions_follow_brand() {
     assert_eq!(ext_of(0x600000), "mov");
     assert_eq!(ext_of(0x700000), "heic");
     assert_eq!(ext_of(0x1000), "jpg");
+    assert_eq!(ext_of(0x940000), "avi");
+    assert_eq!(ext_of(0x980000), "webm");
+    assert_eq!(ext_of(0x9C0000), "wmv");
+    assert_eq!(ext_of(0xA00000), "tif");
+    assert_eq!(ext_of(0xA60000), "m2ts");
 }
 
 #[test]

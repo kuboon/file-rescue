@@ -20,11 +20,26 @@ parses the ISO-BMFF box structure (`ftyp`/`moov`/`mdat`/... with 32- and
 box sizes to the file's exact end — so a contiguous video comes out
 whole, as one file, even when its data doesn't look like anything.
 
-Supported formats: **MP4 / MOV / HEIC / AVIF** (structure walk, exact),
-**PNG** (chunk walk, exact; partial carve of damaged files), **JPEG**
-(marker-structure validation + entropy-aware EOI scan), **PDF** (last
-`%%EOF`, incremental updates handled). Adding a format is one file in
-`src/carve/formats/` plus one registry line.
+### Supported formats
+
+| Formats | How the length is found |
+|---|---|
+| MP4 / MOV / HEIC / AVIF / 3GP (ISO-BMFF) | box-structure walk (exact) |
+| MKV / WebM — the usual containers for VP9/**AV1** | EBML element sizes (exact) |
+| AVI (incl. >2 GiB OpenDML) / WAV / WebP (RIFF) | declared RIFF size (exact) |
+| WMV / WMA (ASF) | object sizes (exact) |
+| PNG | chunk walk (exact; damaged files carved partially) |
+| GIF | block-structure walk (exact) |
+| BMP | declared file size (exact) |
+| TIFF and TIFF-based RAW (CR2; typically NEF/ARW/DNG) | IFD walk → furthest referenced strip/tile data |
+| JPEG | marker-structure validation + entropy-aware EOI scan |
+| MPEG-PS (.mpg — DVD recorders) | pack/PES walk by start codes |
+| MPEG-TS (.ts) / AVCHD (.m2ts) | 188/192-byte packet sync run |
+| PDF | last `%%EOF` (incremental updates handled) |
+
+AV1 is a codec, not a container — AV1 video is recovered via its
+container (MP4/WebM/MKV), AV1 stills via AVIF. Adding a format is one
+file in `src/carve/formats/` plus one registry line.
 
 Note: files that are *actually fragmented on disk* (interleaved writes on
 FAT/exFAT) cannot be reassembled by any contiguous carver; a
