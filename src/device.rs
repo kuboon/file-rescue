@@ -105,6 +105,13 @@ pub fn check_output_safety(source: &Path, output: &Path) -> Result<(), DeviceErr
         Ok(m) => m,
         Err(_) => return Ok(()),
     };
+    // Portable same-file check (also catches symlink aliases); the
+    // unix inode comparison below additionally catches hard links.
+    if let (Ok(a), Ok(b)) = (std::fs::canonicalize(source), std::fs::canonicalize(output)) {
+        if a == b {
+            return Err(DeviceError::OutputIsSource(output.display().to_string()));
+        }
+    }
     if same_file(&src_meta, &out_meta) {
         return Err(DeviceError::OutputIsSource(output.display().to_string()));
     }
