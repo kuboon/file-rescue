@@ -1,0 +1,34 @@
+[package]
+name = "file-rescue"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Rescue data from failing storage: ddrescue-style imaging and media-focused file carving"
+repository = "https://github.com/kuboon/file-rescue"
+
+[[bin]]
+name = "rescue"
+path = "src/main.rs"
+
+[features]
+# Exposes --simulate-bad on `rescue image` for demos without real broken hardware.
+fault-injection = []
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+ctrlc = "3"
+indicatif = "0.17"
+memchr = "2"
+thiserror = "2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+tempfile = "3"
+
+[profile.release]
+lto = true
