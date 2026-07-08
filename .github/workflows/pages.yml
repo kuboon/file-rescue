@@ -15,10 +15,6 @@ permissions:
   pull-requests: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   pages:
     uses: kuboon/workflows/.github/workflows/github-page-with-preview.yaml@main
