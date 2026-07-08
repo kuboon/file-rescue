@@ -1,0 +1,3 @@
+[tasks.build]
+description = "Build the GitHub Pages site (plain static files, no bundling needed)"
+run = "rm -rf dist && mkdir -p dist && cp -r site/. dist/"

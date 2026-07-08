@@ -1,0 +1,24 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - site/**
+      - mise.toml
+      - .github/workflows/pages.yml
+
+permissions:
+  contents: read
+  pages: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pages:
+    uses: kuboon/workflows/.github/workflows/github-page-with-preview.yaml@main

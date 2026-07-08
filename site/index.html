@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>file-rescue — rescue data from failing storage</title>
+<meta name="description" content="ddrescue-style block imaging and media-focused file carving for failing storage, written in Rust.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧰</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">rescue</p>
+    <h1>Rescue data from failing storage</h1>
+    <p class="lede">
+      ddrescue-style block imaging, plus a file carver that keeps your videos
+      whole instead of splitting them into fragments.
+    </p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/kuboon/file-rescue">View on GitHub</a>
+      <a class="btn" href="https://github.com/kuboon/file-rescue/releases">Download a release</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="why">
+    <h2>Why another carver?</h2>
+    <p>
+      Tools like PhotoRec guess where a video file ends by sniffing its
+      content, and give up as soon as the data stops looking like video —
+      the result is one clip split into dozens of tiny fragments.
+      <strong>rescue carve</strong> instead parses the container structure
+      (the <code>ftyp</code>/<code>moov</code>/<code>mdat</code> boxes in
+      MP4/MOV/HEIC, the EBML elements in MKV/WebM, the declared sizes in
+      RIFF/ASF) and follows the <em>declared</em> length to the file's exact
+      end. A contiguous video comes out as one file, byte-exact, every time.
+    </p>
+    <p>
+      Files genuinely fragmented on disk (interleaved writes on FAT/exFAT)
+      can't be fixed by any contiguous carver — that needs a filesystem-aware
+      pass, which is on the roadmap.
+    </p>
+  </section>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li>
+        <h3>1. Image the failing device</h3>
+        <p>
+          <code>rescue image</code> copies a dying block device into a
+          sparse image file, tracked in a
+          <a href="https://www.gnu.org/software/ddrescue/">GNU ddrescue</a>-compatible
+          mapfile: easy data first, then it narrows down bad sectors in
+          passes (copy → trim → scrape → retry). Interrupt it any time —
+          re-running the same command resumes exactly where it left off.
+          Linux only, since it needs direct block-device access.
+        </p>
+      </li>
+      <li>
+        <h3>2. Carve files out of the image</h3>
+        <p>
+          <code>rescue carve</code> scans the image for file signatures and
+          extracts photos, videos and documents — structure-aware where the
+          format allows it, so extraction is exact rather than guessed.
+          Pass <code>--map</code> and it skips regions that were never
+          rescued, and flags any extracted file that overlaps a bad sector
+          as <em>damaged</em> in the report. Works on Linux, macOS and
+          Windows.
+        </p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <p>Grab a binary from the
+      <a href="https://github.com/kuboon/file-rescue/releases">releases page</a>,
+      or build it yourself with Cargo:</p>
+    <pre><code>git clone https://github.com/kuboon/file-rescue
+cd file-rescue
+cargo build --release
+# binary at target/release/rescue</code></pre>
+  </section>
+
+  <section id="usage">
+    <h2>Usage</h2>
+
+    <h3>Image a failing device</h3>
+    <pre><code># never opens the source for writing; refuses to write
+# the image onto the source device itself
+rescue image /dev/sdb card.img card.map --retry-passes 2
+
+# interrupted? just run the same command again to resume
+rescue image /dev/sdb card.img card.map --retry-passes 2</code></pre>
+
+    <h3>Check the damage</h3>
+    <pre><code>rescue map show card.map
+rescue map regions card.map --status bad-sector</code></pre>
+
+    <h3>Carve files out</h3>
+    <pre><code>rescue carve card.img recovered/ --map card.map
+cat recovered/report.txt</code></pre>
+
+    <p>Try the whole flow without real broken hardware:</p>
+    <pre><code>cargo run --example mkdemo -- demo.bin
+cargo build --features fault-injection
+target/debug/rescue image demo.bin out.img out.map \
+    --simulate-bad 0x140000+0x2000,0xD08000+0x400@2 --retry-passes 1
+target/debug/rescue carve out.img recovered/ --map out.map</code></pre>
+  </section>
+
+  <section id="formats">
+    <h2>Supported formats</h2>
+    <table>
+      <thead><tr><th>Formats</th><th>How the length is found</th></tr></thead>
+      <tbody>
+        <tr><td>MP4 / MOV / HEIC / AVIF / 3GP <span class="muted">(ISO-BMFF)</span></td><td>box-structure walk <span class="tag exact">exact</span></td></tr>
+        <tr><td>MKV / WebM <span class="muted">— the usual home of VP9/AV1</span></td><td>EBML element sizes <span class="tag exact">exact</span></td></tr>
+        <tr><td>AVI <span class="muted">(incl. &gt;2 GiB OpenDML)</span> / WAV / WebP <span class="muted">(RIFF)</span></td><td>declared RIFF size <span class="tag exact">exact</span></td></tr>
+        <tr><td>WMV / WMA <span class="muted">(ASF)</span></td><td>object sizes <span class="tag exact">exact</span></td></tr>
+        <tr><td>PNG</td><td>chunk walk <span class="tag exact">exact</span>, damaged files carved partially</td></tr>
+        <tr><td>GIF</td><td>block-structure walk <span class="tag exact">exact</span></td></tr>
+        <tr><td>BMP</td><td>declared file size <span class="tag exact">exact</span></td></tr>
+        <tr><td>TIFF and TIFF-based RAW <span class="muted">(CR2; typically NEF/ARW/DNG)</span></td><td>IFD walk to furthest strip/tile data</td></tr>
+        <tr><td>JPEG</td><td>marker validation + entropy-aware EOI scan</td></tr>
+        <tr><td>MPEG-PS <span class="muted">(.mpg — DVD recorders)</span></td><td>pack/PES walk by start codes</td></tr>
+        <tr><td>MPEG-TS <span class="muted">(.ts)</span> / AVCHD <span class="muted">(.m2ts)</span></td><td>188/192-byte packet sync run</td></tr>
+        <tr><td>PDF</td><td>last <code>%%EOF</code> <span class="muted">(incremental updates handled)</span></td></tr>
+      </tbody>
+    </table>
+    <p class="muted">
+      AV1 is a codec, not a container — AV1 video is recovered via its
+      container (MP4/WebM/MKV), AV1 stills via AVIF. Adding a format is one
+      file plus one registry line; see the
+      <a href="https://github.com/kuboon/file-rescue#readme">README</a>.
+    </p>
+  </section>
+
+  <section id="platforms">
+    <h2>Platform support</h2>
+    <table>
+      <thead><tr><th>Platform</th><th><code>rescue image</code></th><th><code>rescue carve</code> / <code>map</code></th></tr></thead>
+      <tbody>
+        <tr><td>Linux</td><td>✅ full support</td><td>✅</td></tr>
+        <tr><td>macOS</td><td>—</td><td>✅</td></tr>
+        <tr><td>Windows</td><td>—</td><td>✅</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Imaging needs direct block-device access, so it's Linux only for now.</p>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>
+    <a href="https://github.com/kuboon/file-rescue">kuboon/file-rescue</a>
+    · MIT licensed
+  </p>
+</footer>
+
+</body>
+</html>
